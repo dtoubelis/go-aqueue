@@ -1,0 +1,7 @@
+/.vscode
+/.history
+/.project
+/.idea
+/*.iml
+/coverage.*
+debug.test
