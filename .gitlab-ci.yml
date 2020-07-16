@@ -10,6 +10,15 @@ variables:
     BASE_DIR: $GOPATH/src/$CI_SERVER_HOST/$CI_PROJECT_NAMESPACE
     GOLANG_VERSION: "1.12"
 
+default:
+    before_script:
+        - mkdir -p "$BASE_DIR"
+        - cd "$BASE_DIR"
+        - ln -s "$CI_PROJECT_DIR"
+        - cd "$BASE_DIR/$CI_PROJECT_NAME"
+        - go get -u github.com/golang/dep/cmd/dep
+        - dep ensure
+
 .test-common: &test-common
     stage: test
     tags:
@@ -21,10 +30,6 @@ test_go1.6:
         GOLANG_VERSION: "1.6"
     <<: *test-common
     script:
-        - mkdir -p "$BASE_DIR"
-        - cd "$BASE_DIR"
-        - ln -s "$CI_PROJECT_DIR"
-        - cd "$BASE_DIR/$CI_PROJECT_NAME"
         - make test
     allow_failure: true
 
@@ -33,10 +38,6 @@ test_go1.8:
         GOLANG_VERSION: "1.8"
     <<: *test-common
     script:
-        - mkdir -p "$BASE_DIR"
-        - cd "$BASE_DIR"
-        - ln -s "$CI_PROJECT_DIR"
-        - cd "$BASE_DIR/$CI_PROJECT_NAME"
         - make test
     allow_failure: true
 
@@ -45,10 +46,6 @@ test_go1.9:
         GOLANG_VERSION: "1.9"
     <<: *test-common
     script:
-        - mkdir -p "$BASE_DIR"
-        - cd "$BASE_DIR"
-        - ln -s "$CI_PROJECT_DIR"
-        - cd "$BASE_DIR/$CI_PROJECT_NAME"
         - make test
 
 test_go1.11:
@@ -56,10 +53,6 @@ test_go1.11:
         GOLANG_VERSION: "1.11"
     <<: *test-common
     script:
-        - mkdir -p "$BASE_DIR"
-        - cd "$BASE_DIR"
-        - ln -s "$CI_PROJECT_DIR"
-        - cd "$BASE_DIR/$CI_PROJECT_NAME"
         - make test
 
 test_go1.12:
@@ -67,10 +60,6 @@ test_go1.12:
         GOLANG_VERSION: "1.12"
     <<: *test-common
     script:
-        - mkdir -p "$BASE_DIR"
-        - cd "$BASE_DIR"
-        - ln -s "$CI_PROJECT_DIR"
-        - cd "$BASE_DIR/$CI_PROJECT_NAME"
         - make test
 
 test_go1.13:
@@ -78,47 +67,27 @@ test_go1.13:
         GOLANG_VERSION: "1.13"
     <<: *test-common
     script:
-        - mkdir -p "$BASE_DIR"
-        - cd "$BASE_DIR"
-        - ln -s "$CI_PROJECT_DIR"
-        - cd "$BASE_DIR/$CI_PROJECT_NAME"
         - make test
 
 test_vet:
     <<: *test-common
     script:
-        - mkdir -p "$BASE_DIR"
-        - cd "$BASE_DIR"
-        - ln -s "$CI_PROJECT_DIR"
-        - cd "$BASE_DIR/$CI_PROJECT_NAME"
         - make vet
 
 test_lint:
     <<: *test-common
     script:
-        - mkdir -p "$BASE_DIR"
-        - cd "$BASE_DIR"
-        - ln -s "$CI_PROJECT_DIR"
-        - cd "$BASE_DIR/$CI_PROJECT_NAME"
         - go get -u golang.org/x/lint/golint
         - PATH=${GOPATH}/bin:$PATH make lint
 
 test_sec:
     <<: *test-common
     script:
-        - mkdir -p "$BASE_DIR"
-        - cd "$BASE_DIR"
-        - ln -s "$CI_PROJECT_DIR"
-        - cd "$BASE_DIR/$CI_PROJECT_NAME"
         - go get -u github.com/securego/gosec/cmd/gosec
         - PATH=$GOPATH/bin:$PATH make sec
 
 test_coverage:
     <<: *test-common
     script:
-        - mkdir -p "$BASE_DIR"
-        - cd "$BASE_DIR"
-        - ln -s "$CI_PROJECT_DIR"
-        - cd "$BASE_DIR/$CI_PROJECT_NAME"
         - make coverage
   
