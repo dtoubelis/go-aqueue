@@ -14,6 +14,8 @@ const (
 	StatusCodeBusy
 	// StatusCodeCancelled returned when blocking operation times outd
 	StatusCodeCancelled
+	// StatusCodeInvalidArgument ...
+	StatusCodeInvalidArgument
 )
 
 // Error is opaque error context

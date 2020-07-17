@@ -5,8 +5,11 @@
 package aqueue
 
 import (
+	"context"
+	"fmt"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -22,7 +25,7 @@ func TestPushAsyncPopNil(t *testing.T) {
 	assert.NoError(t, err)
 
 	// now we expect to block
-	waitFunc, _ := q.pushAsync(nil)
+	waitFunc, _ := q.PushAsync(nil)
 	wg.Add(1)
 	go func() {
 		err := waitFunc()
@@ -50,7 +53,7 @@ func TestPushAsyncPopString(t *testing.T) {
 	assert.NoError(t, err)
 
 	// now we expect to block
-	waitFunc, _ := q.pushAsync(refVal)
+	waitFunc, _ := q.PushAsync(refVal)
 	wg.Add(1)
 	go func() {
 		err := waitFunc()
@@ -74,7 +77,7 @@ func TestPushAsyncCancel(t *testing.T) {
 	refErr := NewError(StatusCodeCancelled, "request cancelled")
 	q := NewAQueue()
 
-	pushFunc, cancelFunc := q.pushAsync(refVal)
+	pushFunc, cancelFunc := q.PushAsync(refVal)
 	go func() {
 		err := pushFunc()
 		assert.Error(t, err)
@@ -109,7 +112,7 @@ func TestPushAsyncClose(t *testing.T) {
 
 	wg.Add(sources)
 	for i := 0; i < sources; i++ {
-		pushFunc, _ := q.pushAsync(refVal)
+		pushFunc, _ := q.PushAsync(refVal)
 		go func() {
 			err := pushFunc()
 			assert.Error(t, err)
@@ -159,7 +162,7 @@ func TestPopAsyncPushNil(t *testing.T) {
 	var wg sync.WaitGroup
 
 	q := NewAQueue()
-	popFunc, _ := q.popAsync()
+	popFunc, _ := q.PopAsync()
 
 	wg.Add(1)
 	go func() {
@@ -179,7 +182,7 @@ func TestPopAsyncPushString(t *testing.T) {
 
 	refVal := "string1"
 	q := NewAQueue()
-	popFunc, _ := q.popAsync()
+	popFunc, _ := q.PopAsync()
 
 	wg.Add(1)
 	go func() {
@@ -200,7 +203,7 @@ func TestPopAsyncCancel(t *testing.T) {
 
 	refErr := NewError(StatusCodeCancelled, "request cancelled")
 	q := NewAQueue()
-	popFunc, cancelFunc := q.popAsync()
+	popFunc, cancelFunc := q.PopAsync()
 
 	wg.Add(1)
 	go func() {
@@ -228,7 +231,7 @@ func TestPopAsyncClose(t *testing.T) {
 
 	wg.Add(rounds)
 	for i := 0; i < rounds; i++ {
-		popFunc, _ := q.popAsync()
+		popFunc, _ := q.PopAsync()
 		go func() {
 			val, err := popFunc()
 			assert.Nil(t, val)
@@ -319,4 +322,46 @@ func BenchmarkPushThroughChannel(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		<-c
 	}
+}
+
+func ExampleAQueue_PushAsync_withContext() {
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+
+	q := NewAQueue()
+	// add a value for next call to block
+	q.TryPush(nil)
+	// initiate asynchronous call
+	funcPush, funcCancel := q.PushAsync(nil)
+	// wait for context in a separate thread
+	go func() {
+		<-ctx.Done()
+		funcCancel()
+	}()
+	// wait for push to timeout
+	if err := funcPush(); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output:
+	// request cancelled
+}
+
+func ExampleAQueue_PopAsync_withContext() {
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+
+	q := NewAQueue()
+	// initiate asynchronous call
+	funcPop, funcCancel := q.PopAsync()
+	// wait for context in a separate thread
+	go func() {
+		<-ctx.Done()
+		funcCancel()
+	}()
+	// wait for push to timeout
+	if _, err := funcPop(); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output:
+	// request cancelled
 }
