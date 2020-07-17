@@ -1,2 +1,2 @@
-# go-async
+# go-aqueue
 

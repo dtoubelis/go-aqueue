@@ -5,23 +5,17 @@
 package aqueue
 
 import (
-	"os"
 	"sync"
 	"testing"
 
-	"github.com/inconshreveable/log15"
 	"github.com/stretchr/testify/assert"
 )
-
-func init() {
-	log15.Root().SetHandler(log15.LvlFilterHandler(log15.LvlDebug, log15.CallerFileHandler(log15.StreamHandler(os.Stdout, log15.LogfmtFormat()))))
-}
 
 func TestPushAsyncPopNil(t *testing.T) {
 	var wg sync.WaitGroup
 	var err error
 
-	q := New()
+	q := NewAQueue()
 
 	// try to  send
 	err = q.TryPush(nil)
@@ -49,7 +43,7 @@ func TestPushAsyncPopString(t *testing.T) {
 	var err error
 
 	refVal := "string1"
-	q := New()
+	q := NewAQueue()
 
 	// try to  send
 	err = q.TryPush(refVal)
@@ -77,8 +71,8 @@ func TestPushAsyncCancel(t *testing.T) {
 	wg.Add(1)
 
 	refVal := "string1"
-	refErr := NewQueueError(StatusCodeCancelled, "request cancelled")
-	q := New()
+	refErr := NewError(StatusCodeCancelled, "request cancelled")
+	q := NewAQueue()
 
 	pushFunc, cancelFunc := q.pushAsync(refVal)
 	go func() {
@@ -86,7 +80,7 @@ func TestPushAsyncCancel(t *testing.T) {
 		assert.Error(t, err)
 		assert.IsType(t, refErr, err)
 		assert.Equal(t, refErr.Error(), err.Error())
-		assert.Equal(t, refErr.StatusCode(), err.(*QueueError).StatusCode())
+		assert.Equal(t, refErr.StatusCode(), err.(*Error).StatusCode())
 		wg.Done()
 	}()
 
@@ -100,10 +94,10 @@ func TestPushAsyncClose(t *testing.T) {
 	var wg sync.WaitGroup
 	var err error
 
-	rounds := 1000
+	sources := 1000
 	refVal := "string1"
-	refErr := NewQueueError(StatusCodeClosed, "queue closed")
-	q := New()
+	refErr := NewError(StatusCodeClosed, "queue closed")
+	q := NewAQueue()
 
 	// fill the buffer
 	err = q.TryPush(refVal)
@@ -113,15 +107,15 @@ func TestPushAsyncClose(t *testing.T) {
 	err = q.TryPush(refVal)
 	assert.Error(t, err)
 
-	wg.Add(rounds)
-	for i := 0; i < rounds; i++ {
+	wg.Add(sources)
+	for i := 0; i < sources; i++ {
 		pushFunc, _ := q.pushAsync(refVal)
 		go func() {
 			err := pushFunc()
 			assert.Error(t, err)
 			assert.IsType(t, refErr, err)
 			assert.Equal(t, refErr.Error(), err.Error())
-			assert.Equal(t, refErr.StatusCode(), err.(*QueueError).StatusCode())
+			assert.Equal(t, refErr.StatusCode(), err.(*Error).StatusCode())
 			wg.Done()
 		}()
 	}
@@ -135,8 +129,8 @@ func TestTryPush(t *testing.T) {
 	var err error
 
 	refVal := "string1"
-	refErr := NewQueueError(StatusCodeBusy, "queue busy")
-	q := New()
+	refErr := NewError(StatusCodeBusy, "queue busy")
+	q := NewAQueue()
 
 	// try to  send
 	err = q.TryPush(refVal)
@@ -147,7 +141,7 @@ func TestTryPush(t *testing.T) {
 	assert.Error(t, err)
 	assert.IsType(t, refErr, err)
 	assert.Equal(t, refErr.Error(), err.Error())
-	assert.Equal(t, refErr.StatusCode(), err.(*QueueError).StatusCode())
+	assert.Equal(t, refErr.StatusCode(), err.(*Error).StatusCode())
 
 	// clear the queue
 	val, err := q.TryPop()
@@ -164,7 +158,7 @@ func TestTryPush(t *testing.T) {
 func TestPopAsyncPushNil(t *testing.T) {
 	var wg sync.WaitGroup
 
-	q := New()
+	q := NewAQueue()
 	popFunc, _ := q.popAsync()
 
 	wg.Add(1)
@@ -184,7 +178,7 @@ func TestPopAsyncPushString(t *testing.T) {
 	var wg sync.WaitGroup
 
 	refVal := "string1"
-	q := New()
+	q := NewAQueue()
 	popFunc, _ := q.popAsync()
 
 	wg.Add(1)
@@ -204,8 +198,8 @@ func TestPopAsyncPushString(t *testing.T) {
 func TestPopAsyncCancel(t *testing.T) {
 	var wg sync.WaitGroup
 
-	refErr := NewQueueError(StatusCodeCancelled, "request cancelled")
-	q := New()
+	refErr := NewError(StatusCodeCancelled, "request cancelled")
+	q := NewAQueue()
 	popFunc, cancelFunc := q.popAsync()
 
 	wg.Add(1)
@@ -215,7 +209,7 @@ func TestPopAsyncCancel(t *testing.T) {
 		assert.Error(t, err)
 		assert.IsType(t, refErr, err)
 		assert.Equal(t, refErr.Error(), err.Error())
-		assert.Equal(t, refErr.StatusCode(), err.(*QueueError).StatusCode())
+		assert.Equal(t, refErr.StatusCode(), err.(*Error).StatusCode())
 		wg.Done()
 	}()
 
@@ -229,8 +223,8 @@ func TestPopAsyncClose(t *testing.T) {
 	var wg sync.WaitGroup
 
 	rounds := 1000
-	refErr := NewQueueError(StatusCodeClosed, "queue closed")
-	q := New()
+	refErr := NewError(StatusCodeClosed, "queue closed")
+	q := NewAQueue()
 
 	wg.Add(rounds)
 	for i := 0; i < rounds; i++ {
@@ -241,7 +235,7 @@ func TestPopAsyncClose(t *testing.T) {
 			assert.Error(t, err)
 			assert.IsType(t, refErr, err)
 			assert.Equal(t, refErr.Error(), err.Error())
-			assert.Equal(t, refErr.StatusCode(), err.(*QueueError).StatusCode())
+			assert.Equal(t, refErr.StatusCode(), err.(*Error).StatusCode())
 			wg.Done()
 		}()
 	}
@@ -257,8 +251,8 @@ func TestTryPop(t *testing.T) {
 	var val interface{}
 
 	refVal := "string1"
-	refErr := NewQueueError(StatusCodeBusy, "queue busy")
-	q := New()
+	refErr := NewError(StatusCodeBusy, "queue busy")
+	q := NewAQueue()
 
 	// try to pop
 	val, err = q.TryPop()
@@ -266,7 +260,7 @@ func TestTryPop(t *testing.T) {
 	assert.Error(t, err)
 	assert.IsType(t, refErr, err)
 	assert.Equal(t, refErr.Error(), err.Error())
-	assert.Equal(t, refErr.StatusCode(), err.(*QueueError).StatusCode())
+	assert.Equal(t, refErr.StatusCode(), err.(*Error).StatusCode())
 
 	// send data
 	err = q.TryPush(refVal)
@@ -285,5 +279,44 @@ func TestTryPop(t *testing.T) {
 	assert.Error(t, err)
 	assert.IsType(t, refErr, err)
 	assert.Equal(t, refErr.Error(), err.Error())
-	assert.Equal(t, refErr.StatusCode(), err.(*QueueError).StatusCode())
+	assert.Equal(t, refErr.StatusCode(), err.(*Error).StatusCode())
+}
+
+func BenchmarkPushThroughQueue(b *testing.B) {
+	q := NewAQueue()
+
+	concurrent := 97
+	for i := 0; i < concurrent; i++ {
+		go func(idx int) {
+			for {
+				if err := q.Push(idx); err != nil {
+					break
+				}
+			}
+		}(i)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		q.Pop()
+	}
+	q.Close()
+}
+
+func BenchmarkPushThroughChannel(b *testing.B) {
+	c := make(chan int)
+
+	concurrent := 97
+	for i := 0; i < concurrent; i++ {
+		go func(idx int) {
+			for {
+				c <- idx
+			}
+		}(i)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		<-c
+	}
 }

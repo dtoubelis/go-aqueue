@@ -10,10 +10,10 @@ vet: ## Vet the file
 	go vet $(PKG_LIST)
 
 test:
-	go test -short $(PKG_LIST)
+	go test -v -benchmem -bench=. -short $(PKG_LIST)
 
 race:
-	go test -race -short $(PKG_LIST)
+	go test -v -race -short $(PKG_LIST)
 
 sec:
 	gosec -exclude-dir .history -exclude-dir vendor ./...

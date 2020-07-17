@@ -16,26 +16,26 @@ const (
 	StatusCodeCancelled
 )
 
-// QueueError is opaque error context
-type QueueError struct {
+// Error is opaque error context
+type Error struct {
 	status StatusCode
 	msg    string
 }
 
-// NewQueueError create a new
-func NewQueueError(status StatusCode, msg string) *QueueError {
-	return &QueueError{
+// NewError create a new
+func NewError(status StatusCode, msg string) *Error {
+	return &Error{
 		status: status,
 		msg:    msg,
 	}
 }
 
 // Error implements error.Error() call
-func (e *QueueError) Error() string {
+func (e *Error) Error() string {
 	return e.msg
 }
 
 // StatusCode return a short operation status
-func (e *QueueError) StatusCode() StatusCode {
+func (e *Error) StatusCode() StatusCode {
 	return e.status
 }
