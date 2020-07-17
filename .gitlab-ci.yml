@@ -55,6 +55,13 @@ test_go1.9:
     script:
         - make test
 
+test_go1.10:
+    variables:
+        GOLANG_VERSION: "1.10"
+    <<: *test-common
+    script:
+        - make test
+
 test_go1.11:
     variables:
         GOLANG_VERSION: "1.11"
@@ -72,6 +79,13 @@ test_go1.12:
 test_go1.13:
     variables:
         GOLANG_VERSION: "1.13"
+    <<: *test-common
+    script:
+        - make test
+
+test_go1.14:
+    variables:
+        GOLANG_VERSION: "1.14"
     <<: *test-common
     script:
         - make test
