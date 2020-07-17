@@ -5,18 +5,25 @@
 package aqueue
 
 import (
+	"context"
 	"sync"
 )
 
 var (
-	errBusy      = NewError(StatusCodeBusy, "queue busy")
-	errClosed    = NewError(StatusCodeClosed, "queue closed")
-	errCancelled = NewError(StatusCodeCancelled, "request cancelled")
+	errBusy            = NewError(StatusCodeBusy, "queue busy")
+	errClosed          = NewError(StatusCodeClosed, "queue closed")
+	errCancelled       = NewError(StatusCodeCancelled, "request cancelled")
+	errInvalidArgument = NewError(StatusCodeInvalidArgument, "invalid arguments")
 )
 
-type popFunc func() (interface{}, error)
-type pushFunc func() error
-type cancelFunc func()
+// PopFunc is a promise that returns value when data is available
+type PopFunc func() (interface{}, error)
+
+// PushFunc is promise that returns when data is pushed to the queue
+type PushFunc func() error
+
+// CancelFunc is called to cancel an asynchronous operation
+type CancelFunc func()
 
 // AQueue is opaque context
 type AQueue struct {
@@ -36,23 +43,38 @@ func NewAQueue() *AQueue {
 	return ctx
 }
 
-// Push adds an element to the end of the queue.
-func (c *AQueue) Push(val interface{}) error {
-	pushFunc, _ := c.pushAsync(val)
+// Push adds an element to the queue
+func (q *AQueue) Push(val interface{}) error {
+	pushFunc, _ := q.PushAsync(val)
 	return pushFunc()
 }
 
-func (c *AQueue) pushAsync(val interface{}) (pushFunc, cancelFunc) {
+// PushWithContext adds element to the queue with context
+func (q *AQueue) PushWithContext(ctx context.Context, val interface{}) error {
+	if ctx == nil {
+		return errInvalidArgument
+	}
+	pushFunc, cancelFunc := q.PushAsync(val)
+	go func() {
+		<-ctx.Done()
+		cancelFunc()
+	}()
+	return pushFunc()
+}
+
+// PushAsync initiates an asynchronoush push and returns
+// a future and a cancel function
+func (q *AQueue) PushAsync(val interface{}) (PushFunc, CancelFunc) {
 	cancelled := false
 	return func() error {
-			c.lock.Lock()
-			defer c.lock.Unlock()
+			q.lock.Lock()
+			defer q.lock.Unlock()
 			for {
 				if cancelled {
 					return errCancelled
 				}
-				if err := c.tryPushUnsync(val); err == nil {
-					c.cond.Broadcast()
+				if err := q.tryPushUnsync(val); err == nil {
+					q.cond.Broadcast()
 					return nil
 				} else if e, ok := err.(*Error); ok {
 					if e.StatusCode() == StatusCodeClosed {
@@ -61,57 +83,72 @@ func (c *AQueue) pushAsync(val interface{}) (pushFunc, cancelFunc) {
 				} else {
 					panic("unknown error type")
 				}
-				c.cond.Wait()
+				q.cond.Wait()
 			}
 		}, func() {
-			c.lock.Lock()
-			defer c.lock.Unlock()
+			q.lock.Lock()
+			defer q.lock.Unlock()
 			if !cancelled {
 				cancelled = true
-				c.cond.Broadcast()
+				q.cond.Broadcast()
 			}
 
 		}
 }
 
 // TryPush attempts to add an element to the queue without blocking.
-func (c *AQueue) TryPush(val interface{}) error {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	return c.tryPushUnsync(val)
+func (q *AQueue) TryPush(val interface{}) error {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+	return q.tryPushUnsync(val)
 }
 
-func (c *AQueue) tryPushUnsync(val interface{}) error {
+func (q *AQueue) tryPushUnsync(val interface{}) error {
 	// check if queue is closed
-	if c.closed {
+	if q.closed {
 		return errClosed
 	}
 	// update value or wait
-	if !c.hasValue {
-		c.val = val
-		c.hasValue = true
+	if !q.hasValue {
+		q.val = val
+		q.hasValue = true
 		return nil
 	}
 	return errBusy
 }
 
 // Pop removes the first element from the queue
-func (c *AQueue) Pop() (interface{}, error) {
-	popFunc, _ := c.popAsync()
+func (q *AQueue) Pop() (interface{}, error) {
+	popFunc, _ := q.PopAsync()
 	return popFunc()
 }
 
-func (c *AQueue) popAsync() (popFunc, cancelFunc) {
+// PopWithContext removes an element from the queue with context
+func (q *AQueue) PopWithContext(ctx context.Context) (interface{}, error) {
+	if ctx == nil {
+		return nil, errInvalidArgument
+	}
+	popFunc, cancelFunc := q.PopAsync()
+	go func() {
+		<-ctx.Done()
+		cancelFunc()
+	}()
+	return popFunc()
+}
+
+// PopAsync initiates retrieval of the next a value from the queue and
+// returns a future and a cancel function
+func (q *AQueue) PopAsync() (PopFunc, CancelFunc) {
 	cancelled := false
 	return func() (interface{}, error) {
-			c.lock.Lock()
-			defer c.lock.Unlock()
+			q.lock.Lock()
+			defer q.lock.Unlock()
 			for {
 				if cancelled {
 					return nil, errCancelled
 				}
-				if val, err := c.tryPopUnsync(); err == nil {
-					c.cond.Broadcast()
+				if val, err := q.tryPopUnsync(); err == nil {
+					q.cond.Broadcast()
 					return val, nil
 				} else if e, ok := err.(*Error); ok {
 					if e.StatusCode() == StatusCodeClosed {
@@ -120,50 +157,50 @@ func (c *AQueue) popAsync() (popFunc, cancelFunc) {
 				} else {
 					panic("unknown error type")
 				}
-				c.cond.Wait()
+				q.cond.Wait()
 			}
 		}, func() {
-			c.lock.Lock()
-			defer c.lock.Unlock()
+			q.lock.Lock()
+			defer q.lock.Unlock()
 			if !cancelled {
 				cancelled = true
-				c.cond.Broadcast()
+				q.cond.Broadcast()
 			}
 		}
 }
 
 // TryPop attemts to remove the last element from the queue without blocking.
-func (c *AQueue) TryPop() (interface{}, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	return c.tryPopUnsync()
+func (q *AQueue) TryPop() (interface{}, error) {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+	return q.tryPopUnsync()
 }
 
-func (c *AQueue) tryPopUnsync() (interface{}, error) {
+func (q *AQueue) tryPopUnsync() (interface{}, error) {
 	// check if que is closed
-	if c.closed {
+	if q.closed {
 		return nil, errClosed
 	}
 	// update value or wait
-	if !c.hasValue {
+	if !q.hasValue {
 		return nil, errBusy
 	}
-	val := c.val
-	c.val = nil
-	c.hasValue = false
+	val := q.val
+	q.val = nil
+	q.hasValue = false
 	return val, nil
 }
 
 // Close closes the queue causing any pending Pop/Push calls to exit with EOF error
 // and any subsequent requests to fail as well. Closed queue cannot be reused.
-func (c *AQueue) Close() {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	if c.closed {
+func (q *AQueue) Close() {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+	if q.closed {
 		return
 	}
-	c.val = nil // release any references
-	c.hasValue = false
-	c.closed = true
-	c.cond.Broadcast()
+	q.val = nil // release any references
+	q.hasValue = false
+	q.closed = true
+	q.cond.Broadcast()
 }
