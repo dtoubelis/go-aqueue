@@ -33,13 +33,20 @@ test_go1.6:
         - make test
     allow_failure: true
 
+test_go1.7:
+    variables:
+        GOLANG_VERSION: "1.7"
+    <<: *test-common
+    script:
+        - make test
+    allow_failure: true
+
 test_go1.8:
     variables:
         GOLANG_VERSION: "1.8"
     <<: *test-common
     script:
         - make test
-    allow_failure: true
 
 test_go1.9:
     variables:

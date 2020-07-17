@@ -9,17 +9,17 @@ import (
 )
 
 var (
-	errBusy      = NewQueueError(StatusCodeBusy, "queue busy")
-	errClosed    = NewQueueError(StatusCodeClosed, "queue closed")
-	errCancelled = NewQueueError(StatusCodeCancelled, "request cancelled")
+	errBusy      = NewError(StatusCodeBusy, "queue busy")
+	errClosed    = NewError(StatusCodeClosed, "queue closed")
+	errCancelled = NewError(StatusCodeCancelled, "request cancelled")
 )
 
 type popFunc func() (interface{}, error)
 type pushFunc func() error
 type cancelFunc func()
 
-// Ctx is opaque context
-type Ctx struct {
+// AQueue is opaque context
+type AQueue struct {
 	lock     *sync.Mutex
 	cond     *sync.Cond
 	val      interface{}
@@ -27,22 +27,22 @@ type Ctx struct {
 	closed   bool
 }
 
-// New returns a new queue instance
-func New() *Ctx {
-	ctx := &Ctx{
+// NewAQueue returns a new queue instance
+func NewAQueue() *AQueue {
+	ctx := &AQueue{
 		lock: &sync.Mutex{},
 	}
 	ctx.cond = sync.NewCond(ctx.lock)
 	return ctx
 }
 
-// Push implements Queue.Push() call
-func (c *Ctx) Push(val interface{}) error {
+// Push adds an element to the end of the queue.
+func (c *AQueue) Push(val interface{}) error {
 	pushFunc, _ := c.pushAsync(val)
 	return pushFunc()
 }
 
-func (c *Ctx) pushAsync(val interface{}) (pushFunc, cancelFunc) {
+func (c *AQueue) pushAsync(val interface{}) (pushFunc, cancelFunc) {
 	cancelled := false
 	return func() error {
 			c.lock.Lock()
@@ -54,7 +54,7 @@ func (c *Ctx) pushAsync(val interface{}) (pushFunc, cancelFunc) {
 				if err := c.tryPushUnsync(val); err == nil {
 					c.cond.Broadcast()
 					return nil
-				} else if e, ok := err.(*QueueError); ok {
+				} else if e, ok := err.(*Error); ok {
 					if e.StatusCode() == StatusCodeClosed {
 						return e
 					}
@@ -74,14 +74,14 @@ func (c *Ctx) pushAsync(val interface{}) (pushFunc, cancelFunc) {
 		}
 }
 
-// TryPush implements Queue.TryPush() call
-func (c *Ctx) TryPush(val interface{}) error {
+// TryPush attempts to add an element to the queue without blocking.
+func (c *AQueue) TryPush(val interface{}) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	return c.tryPushUnsync(val)
 }
 
-func (c *Ctx) tryPushUnsync(val interface{}) error {
+func (c *AQueue) tryPushUnsync(val interface{}) error {
 	// check if queue is closed
 	if c.closed {
 		return errClosed
@@ -95,13 +95,13 @@ func (c *Ctx) tryPushUnsync(val interface{}) error {
 	return errBusy
 }
 
-// Pop implements Queue.Pop() call
-func (c *Ctx) Pop() (interface{}, error) {
+// Pop removes the first element from the queue
+func (c *AQueue) Pop() (interface{}, error) {
 	popFunc, _ := c.popAsync()
 	return popFunc()
 }
 
-func (c *Ctx) popAsync() (popFunc, cancelFunc) {
+func (c *AQueue) popAsync() (popFunc, cancelFunc) {
 	cancelled := false
 	return func() (interface{}, error) {
 			c.lock.Lock()
@@ -113,7 +113,7 @@ func (c *Ctx) popAsync() (popFunc, cancelFunc) {
 				if val, err := c.tryPopUnsync(); err == nil {
 					c.cond.Broadcast()
 					return val, nil
-				} else if e, ok := err.(*QueueError); ok {
+				} else if e, ok := err.(*Error); ok {
 					if e.StatusCode() == StatusCodeClosed {
 						return nil, e
 					}
@@ -132,14 +132,14 @@ func (c *Ctx) popAsync() (popFunc, cancelFunc) {
 		}
 }
 
-// TryPop implements Queue.TryPop() call
-func (c *Ctx) TryPop() (interface{}, error) {
+// TryPop attemts to remove the last element from the queue without blocking.
+func (c *AQueue) TryPop() (interface{}, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	return c.tryPopUnsync()
 }
 
-func (c *Ctx) tryPopUnsync() (interface{}, error) {
+func (c *AQueue) tryPopUnsync() (interface{}, error) {
 	// check if que is closed
 	if c.closed {
 		return nil, errClosed
@@ -154,8 +154,9 @@ func (c *Ctx) tryPopUnsync() (interface{}, error) {
 	return val, nil
 }
 
-// Close implements Queue.Close() call
-func (c *Ctx) Close() {
+// Close closes the queue causing any pending Pop/Push calls to exit with EOF error
+// and any subsequent requests to fail as well. Closed queue cannot be reused.
+func (c *AQueue) Close() {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if c.closed {
