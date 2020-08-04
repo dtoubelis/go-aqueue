@@ -1,0 +1,114 @@
+#
+# Copyright (c) Dmitri Toubelis
+#
+---
+stages:
+    - test
+
+variables:
+    GOPATH: /go
+    BASE_DIR: $GOPATH/src/$CI_SERVER_HOST/$CI_PROJECT_NAMESPACE
+    GOLANG_VERSION: "1.12"
+
+default:
+    before_script:
+        - mkdir -p "$BASE_DIR"
+        - cd "$BASE_DIR"
+        - ln -s "$CI_PROJECT_DIR"
+        - cd "$BASE_DIR/$CI_PROJECT_NAME"
+        - go get -u github.com/golang/dep/cmd/dep
+        - dep ensure
+
+.test-common: &test-common
+    stage: test
+    tags:
+      - docker
+    image: golang:$GOLANG_VERSION
+  
+test_go1.6:
+    variables:
+        GOLANG_VERSION: "1.6"
+    <<: *test-common
+    script:
+        - make test
+    allow_failure: true
+
+test_go1.7:
+    variables:
+        GOLANG_VERSION: "1.7"
+    <<: *test-common
+    script:
+        - make test
+    allow_failure: true
+
+test_go1.8:
+    variables:
+        GOLANG_VERSION: "1.8"
+    <<: *test-common
+    script:
+        - make test
+
+test_go1.9:
+    variables:
+        GOLANG_VERSION: "1.9"
+    <<: *test-common
+    script:
+        - make test
+
+test_go1.10:
+    variables:
+        GOLANG_VERSION: "1.10"
+    <<: *test-common
+    script:
+        - make test
+
+test_go1.11:
+    variables:
+        GOLANG_VERSION: "1.11"
+    <<: *test-common
+    script:
+        - make test
+
+test_go1.12:
+    variables:
+        GOLANG_VERSION: "1.12"
+    <<: *test-common
+    script:
+        - make test
+
+test_go1.13:
+    variables:
+        GOLANG_VERSION: "1.13"
+    <<: *test-common
+    script:
+        - make test
+
+test_go1.14:
+    variables:
+        GOLANG_VERSION: "1.14"
+    <<: *test-common
+    script:
+        - make test
+
+test_vet:
+    <<: *test-common
+    script:
+        - make vet
+
+test_lint:
+    <<: *test-common
+    script:
+        - go get -u golang.org/x/lint/golint
+        - PATH=${GOPATH}/bin:$PATH make lint
+
+test_sec:
+    <<: *test-common
+    script:
+        - go get -u github.com/securego/gosec/cmd/gosec
+        - PATH=$GOPATH/bin:$PATH make sec
+
+test_coverage:
+    <<: *test-common
+    script:
+        - make coverage
+  
