@@ -1,6 +1,9 @@
 # go-aqueue
 
-Go Asynchronous Queue is a better alternative to go channels.
+Go Asynchronous Queue is a better alternative to go channels. This package
+requires `go1.8` or newer.
+
+## Background
 
 The Message Oriented Programing (or MOP) is not a novelty and is a concept
 known for decades. This concept was implemented in many different languages
@@ -8,15 +11,15 @@ either natively or through various libraries and it is indispensable tool for
 developing higly scalable and extremelly reliable applications and services.
 
 It is nice to see an attempt from Go team to embed it into the language as
-native feature. However, there are number of severe shortcomings in golang
-implementation of channels and this package is an attemt to provide a better
-implementation.
+native feature. However, there is a number of shortcomings in the current
+implementation of go channels and this package is an attemt to provide a
+better implementation.
 
-At the core of MOP is an asynchronows queue and Go channels is a version of
+At the core of MOP is an asynchronows queue and Go channel is a version of
 it. The asyncronous queue used in MOP may resemble some known concurrency
-patterns but it has different requirements:
+patterns (pub/sub, pipeline, etc.) but it has different requirements:
 
-- It is intended to communicae between exactly two parties (so, fair queing
+- It is intended to communicae between exactly two parties (i.e. fair queuing
   is out of scope)
 - It should not provide any buffering. This requirement may be controversial
   but it is based on personal experience and I'm yet to see a use case where
@@ -60,3 +63,7 @@ The author of this package has extensive experience implementing MOP concept
 from highly efficient multimedia processing on low powered embedded devices
 to parallel execution of thouthands of cloud based applications performing
 financial modeling.
+
+## License
+
+See [LICENSE](LICENSE).
