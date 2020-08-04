@@ -285,7 +285,7 @@ func TestTryPop(t *testing.T) {
 	assert.Equal(t, refErr.StatusCode(), err.(*Error).StatusCode())
 }
 
-func BenchmarkPushThroughQueue(b *testing.B) {
+func BenchmarkPushThroughQueueWithConcurrentPushers(b *testing.B) {
 	q := NewAQueue()
 
 	concurrent := 97
@@ -306,7 +306,7 @@ func BenchmarkPushThroughQueue(b *testing.B) {
 	q.Close()
 }
 
-func BenchmarkPushThroughChannel(b *testing.B) {
+func BenchmarkPushThroughChannelWithConcurrentPushers(b *testing.B) {
 	c := make(chan int)
 
 	concurrent := 97
@@ -324,6 +324,39 @@ func BenchmarkPushThroughChannel(b *testing.B) {
 	}
 }
 
+func BenchmarkPushThroughQueueWithSinglePusher(b *testing.B) {
+	q := NewAQueue()
+
+	go func() {
+		for {
+			if err := q.Push(0); err != nil {
+				break
+			}
+		}
+	}()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		q.Pop()
+	}
+	q.Close()
+}
+
+func BenchmarkPushThroughChannelWithSinglePusher(b *testing.B) {
+	c := make(chan int)
+
+	go func() {
+		for {
+			c <- 0
+		}
+	}()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		<-c
+	}
+}
+
 func ExampleAQueue_PushAsync_withContext() {
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
@@ -333,7 +366,7 @@ func ExampleAQueue_PushAsync_withContext() {
 	q.TryPush(nil)
 	// initiate asynchronous call
 	funcPush, funcCancel := q.PushAsync(nil)
-	// wait for context in a separate thread
+	// wait for context cancelation in a separate thread
 	go func() {
 		<-ctx.Done()
 		funcCancel()
@@ -353,7 +386,7 @@ func ExampleAQueue_PopAsync_withContext() {
 	q := NewAQueue()
 	// initiate asynchronous call
 	funcPop, funcCancel := q.PopAsync()
-	// wait for context in a separate thread
+	// wait for context cancelation in a separate thread
 	go func() {
 		<-ctx.Done()
 		funcCancel()
