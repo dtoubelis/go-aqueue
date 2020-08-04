@@ -2,7 +2,7 @@
 
 Go Asynchronous Queue is a better alternative to go channels.
 
-The Message Oriented Programing (oer MOP) is not a novelty and is a concept
+The Message Oriented Programing (or MOP) is not a novelty and is a concept
 known for decades. This concept was implemented in many different languages
 either natively or through various libraries and it is indispensable tool for
 developing higly scalable and extremelly reliable applications and services.
