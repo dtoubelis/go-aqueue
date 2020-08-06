@@ -1,5 +1,7 @@
 # go-aqueue
 
+[![Build Status](https://travis-ci.org/dtoubelis/go-aqueue.svg?branch=master)](https://travis-ci.org/dtoubelis/go-aqueue)
+
 Go Asynchronous Queue is a better alternative to go channels. This package
 requires `go1.8` or newer.
 
@@ -34,7 +36,7 @@ with go channels:
 
 - AQueue can be gracefully closed from any thread and both reader and
   writer will exit with an error message instead of panic.
-- AQueue provides non-blocking methods for wrining to thequeue and reading
+- AQueue provides non-blocking methods for wrining to the queue and reading
   from it.
 - Some AQueue methods return cancel() function that can be used for
   implementing timeouts (i.e. in conjunction with `context.WithDeadline()`
