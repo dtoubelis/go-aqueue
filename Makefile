@@ -19,9 +19,6 @@ race:
 	go test -v -race -short $(PKG_LIST)
 
 coverage:
-	./tools/coverage.sh
+	go test -race -coverprofile=coverage.txt -covermode=atomic
 
-coverage_html:
-	./tools/coverage.sh html
-
-.PHONY: vet lint test coverage coverage_html race test sec
+.PHONY: lint vet sec test race coverage

@@ -69,5 +69,7 @@ jobs:
     - name: "coverage"
       << : *test
       go: "1.13"
-      script: make coverage
+      script:
+        - make coverage
+        - bash <(curl -s https://codecov.io/bash)
       
