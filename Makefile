@@ -9,14 +9,14 @@ lint: ## Lint the files
 vet: ## Vet the file
 	go vet $(PKG_LIST)
 
+sec:
+	gosec -exclude-dir .history -exclude-dir vendor ./...
+
 test:
 	go test -v -benchmem -bench=. -short $(PKG_LIST)
 
 race:
 	go test -v -race -short $(PKG_LIST)
-
-sec:
-	gosec -exclude-dir .history -exclude-dir vendor ./...
 
 coverage:
 	./tools/coverage.sh

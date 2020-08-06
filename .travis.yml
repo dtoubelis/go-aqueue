@@ -1,0 +1,67 @@
+language: go
+os: linux
+dist: bionic
+
+stages:
+  - smoke test
+  - name: test
+    if: branch = master
+
+_smoke: &smoke
+  stage: smoke test
+
+_test: &test
+  stage: test
+  script: make test
+
+jobs:
+  include:
+
+    - name: "lint"
+      << : *smoke
+      go: "1.13"
+      install:
+        - go get -v golang.org/x/lint/golint
+      script: make lint
+      
+    - name: "vet"
+      << : *smoke
+      go: "1.13"
+      script: make vet
+      
+    - name: "sec"
+      << : *smoke
+      go: "1.13"
+      install:
+        - go get -v github.com/securego/gosec/cmd/gosec
+      script: make sec
+      
+    - name: "test_1.8"
+      << : *test
+      go: "1.8"
+
+    - name: "test_1.9"
+      << : *test
+      go: "1.9"
+
+    - name: "test_1.10"
+      << : *test
+      go: "1.10"
+
+    - name: "test_1.11"
+      << : *test
+      go: "1.11"
+
+    - name: "test_1.12"
+      << : *test
+      go: "1.12"
+
+    - name: "test_1.13"
+      << : *test
+      go: "1.13"
+
+    - name: "coverage"
+      << : *test
+      go: "1.13"
+      script: make coverage
+      
