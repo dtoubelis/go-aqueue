@@ -37,6 +37,7 @@ jobs:
     - name: "vet"
       << : *smoke
       go: "1.13"
+      install:
         - go get -v github.com/golang/dep/cmd/dep
         - dep ensure
       script: make vet
