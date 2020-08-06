@@ -1,6 +1,7 @@
 # go-aqueue
 
 [![Build Status](https://travis-ci.org/dtoubelis/go-aqueue.svg?branch=master)](https://travis-ci.org/dtoubelis/go-aqueue)
+[![codecov](https://codecov.io/gh/dtoubelis/go-aqueue/branch/master/graph/badge.svg)](https://codecov.io/gh/dtoubelis/go-aqueue)
 
 Go Asynchronous Queue is a better alternative to go channels. This package
 requires `go1.8` or newer.
