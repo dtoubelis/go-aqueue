@@ -7,6 +7,7 @@ package aqueue
 import (
 	"context"
 	"sync"
+	"time"
 )
 
 var (
@@ -60,6 +61,25 @@ func (q *AQueue) PushWithContext(ctx context.Context, val interface{}) error {
 		cancelFunc()
 	}()
 	return pushFunc()
+}
+
+// PushWithTimeout is a convenience method implementing Push() timeout
+func (q *AQueue) PushWithTimeout(ctx context.Context, val interface{}, d time.Duration) error {
+	if ctx == nil {
+		return errInvalidArgument
+	}
+	// create new context with timeout
+	newCtx, cancel := context.WithTimeout(ctx, d)
+	defer cancel()
+	// initiate asynchronous call
+	funcPush, funcCancel := q.PushAsync(nil)
+	// wait for context cancelation in a separate thread
+	go func() {
+		<-newCtx.Done()
+		funcCancel()
+	}()
+	// wait for push to complete
+	return funcPush()
 }
 
 // PushAsync initiates an asynchronoush push and returns
@@ -131,6 +151,23 @@ func (q *AQueue) PopWithContext(ctx context.Context) (interface{}, error) {
 	popFunc, cancelFunc := q.PopAsync()
 	go func() {
 		<-ctx.Done()
+		cancelFunc()
+	}()
+	return popFunc()
+}
+
+// PopWithTimeout removes an element from the queue with context and timeout
+func (q *AQueue) PopWithTimeout(ctx context.Context, d time.Duration) (interface{}, error) {
+	if ctx == nil {
+		return nil, errInvalidArgument
+	}
+	// create new context with timeout
+	newCtx, cancel := context.WithTimeout(ctx, d)
+	defer cancel()
+	// perform async Pop()
+	popFunc, cancelFunc := q.PopAsync()
+	go func() {
+		<-newCtx.Done()
 		cancelFunc()
 	}()
 	return popFunc()
