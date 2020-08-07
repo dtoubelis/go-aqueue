@@ -25,9 +25,9 @@ patterns (pub/sub, pipeline, etc.) but it has different requirements:
 
 - It is intended to communicae between exactly two parties (i.e. fair queuing
   is out of scope)
-- It should not provide any buffering. This requirement may be controversial
-  but it is based on personal experience and I'm yet to see a use case where
-  buffering provides any advantages.
+- It should not (arguably) provide any buffering. This requirement is based on
+  personal experience and I'm yet to see a use case where buffering provides
+  any advantages.
 
 ## Comparison with go channels
 
