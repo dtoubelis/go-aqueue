@@ -367,7 +367,7 @@ func BenchmarkPushThroughChannelWithSinglePusher(b *testing.B) {
 	}
 }
 
-func ExampleAQueue_PushAsync_withContext() {
+func ExampleAQueue_PushAsync() {
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
 
@@ -389,7 +389,7 @@ func ExampleAQueue_PushAsync_withContext() {
 	// request cancelled
 }
 
-func ExampleAQueue_PopAsync_withContext() {
+func ExampleAQueue_PopAsync() {
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
 
