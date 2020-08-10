@@ -1,7 +1,4 @@
-PKG_VERSION?=0.0.0
-COMMIT=`git rev-parse --short HEAD`
 PKG_LIST := $(shell go list ./... | grep -v /vendor/)
-GO_FILES := $(shell find . -name '*.go' | grep -v /vendor/ | grep -v _test.go)
 
 lint: ## Lint the files
 	golint -set_exit_status $(PKG_LIST)
