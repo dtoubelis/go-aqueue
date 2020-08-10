@@ -2,6 +2,7 @@
 
 [![Build Status](https://travis-ci.org/dtoubelis/go-aqueue.svg?branch=master)](https://travis-ci.org/dtoubelis/go-aqueue)
 [![codecov](https://codecov.io/gh/dtoubelis/go-aqueue/branch/master/graph/badge.svg)](https://codecov.io/gh/dtoubelis/go-aqueue)
+[![GoReport](https://goreportcard.com/badge/github.com/dtoubelis/go-aqueue)](https://goreportcard.com/badge/github.com/dtoubelis/go-aqueue)
 [![GoDoc](https://godoc.org/github.com/dtoubelis/go-aqueue?status.svg)](https://godoc.org/github.com/dtoubelis/go-aqueue)
 ![GitHub](https://img.shields.io/github/license/dtoubelis/go-aqueue)
 
