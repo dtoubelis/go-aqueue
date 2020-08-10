@@ -216,7 +216,7 @@ func (q *AQueue) PopAsync() (PopFunc, CancelFunc) {
 		}
 }
 
-// TryPop attemts to remove the last element from the queue without blocking.
+// TryPop attempts to remove the last element from the queue without blocking.
 func (q *AQueue) TryPop() (interface{}, error) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
