@@ -59,8 +59,6 @@ with go channels:
 
 - Provide more code examples
 - Improve documentation
-- Integrate with one or more CI platforms (TravisCI, CircleCI) for testing
-  on different platforms and producing badges.
 
 ## About the Author
 
