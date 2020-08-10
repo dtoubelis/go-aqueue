@@ -41,7 +41,7 @@ with go channels:
   writer will exit with an error message instead of panic.
 - AQueue provides non-blocking methods for wrining to the queue and reading
   from it.
-- Some AQueue methods return cancel() function that can be used for
+- Some AQueue methods return `cancel()` function that can be used for
   implementing timeouts (i.e. in conjunction with `context.WithDeadline()`
   or `context.WithTimeout()`) or gracefully closing the queue on
   `context.Done()`
