@@ -19,6 +19,8 @@ _test: &test
 
 _test2: &test2
   stage: test
+  install:
+    - go mod vendor
   script: make test
 
 jobs:
