@@ -17,7 +17,7 @@ _test: &test
     - dep ensure
   script: make test
 
-_test: &test-1.11-and-up
+_test2: &test2
   stage: test
   script: make test
 
@@ -56,19 +56,19 @@ jobs:
       go: "1.10"
 
     - name: "test_1.11"
-      << : *test-1.11-and-up
+      << : *test2
       go: "1.11"
 
     - name: "test_1.12"
-      << : *test-1.11-and-up
+      << : *test2
       go: "1.12"
 
     - name: "test_1.13"
-      << : *test-1.11-and-up
+      << : *test2
       go: "1.13"
 
     - name: "coverage"
-      << : *test-1.11-and-up
+      << : *test2
       go: "1.13"
       script:
         - make coverage
