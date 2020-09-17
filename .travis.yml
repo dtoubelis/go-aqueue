@@ -58,7 +58,7 @@ jobs:
       go: "1.10"
 
     - name: "test_1.11"
-      << : *test2
+      << : *test
       go: "1.11"
 
     - name: "test_1.12"
