@@ -39,7 +39,7 @@ with go channels:
 **Pros:**
 
 - AQueue can be gracefully closed from any thread and both reader and
-  writer will exit with an error message instead of panic.
+  writer will exit with an error instead of panic.
 - AQueue provides blocking as well as non-blocking methods for wrining to the
   queue and reading from it.
 - Some AQueue methods return `cancel()` function that can be used for
