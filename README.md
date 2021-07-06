@@ -19,7 +19,7 @@ developing higly scalable and extremelly reliable applications and services.
 It is nice to see an attempt from Go team to embed it into the language as
 native feature. However, there is a number of shortcomings in the current
 implementation of go channels and this package is an attemt to provide a
-better implementation.
+better version.
 
 At the core of MOP is an asynchronows queue and Go channel is a version of
 it. The asyncronous queue used in MOP may resemble some known concurrency
