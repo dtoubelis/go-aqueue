@@ -65,7 +65,7 @@ with go channels:
 
 The author of this package has extensive experience implementing MOP concept
 from highly efficient multimedia processing on low powered embedded devices
-to parallel execution of thouthands of cloud based applications performing
+to parallel execution of thousands of cloud based applications performing
 financial modeling.
 
 ## License
