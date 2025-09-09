@@ -50,7 +50,7 @@ with go channels:
 **Cons:**
 
 - Type safety can only be assured at run time, mostly because of lack of
-  generics in golang.
+  generics in golang (as of Aug 2020).
 - Performance of AQueue is 2-5 times slower than that of native channels.
   The difference in performance depends on hardware and there are benchmarks
   included with the package that will show the actual difference on your
