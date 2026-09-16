@@ -60,36 +60,46 @@ func (q *AQueue) Push(val interface{}) error {
 	return pushFunc()
 }
 
-// PushWithContext adds element to the queue with context
+// PushWithContext adds an element to the queue, giving up when ctx is done.
 func (q *AQueue) PushWithContext(ctx context.Context, val interface{}) error {
 	if ctx == nil {
 		return errInvalidArgument
 	}
 	pushFunc, cancelFunc := q.PushAsync(val)
-	go func() {
-		<-ctx.Done()
-		cancelFunc()
-	}()
+	stop := watchContext(ctx, cancelFunc)
+	defer stop()
 	return pushFunc()
 }
 
-// PushWithTimeout is a convenience method implementing Push() timeout
+// PushWithTimeout is a convenience method implementing Push() with a timeout
+// on top of ctx.
 func (q *AQueue) PushWithTimeout(ctx context.Context, val interface{}, d time.Duration) error {
 	if ctx == nil {
 		return errInvalidArgument
 	}
-	// create new context with timeout
 	newCtx, cancel := context.WithTimeout(ctx, d)
 	defer cancel()
-	// initiate asynchronous call
-	funcPush, funcCancel := q.PushAsync(nil)
-	// wait for context cancelation in a separate thread
+	return q.PushWithContext(newCtx, val)
+}
+
+// watchContext calls cancelFunc if ctx is done before the returned stop
+// function is invoked. Unlike a bare `go func() { <-ctx.Done(); cancel() }()`,
+// the watcher goroutine always exits when the operation completes, so it
+// cannot leak for long-lived or background contexts.
+func watchContext(ctx context.Context, cancelFunc CancelFunc) (stop func()) {
+	// Fast path: nothing to watch for a context that can never be done.
+	if ctx.Done() == nil {
+		return func() {}
+	}
+	done := make(chan struct{})
 	go func() {
-		<-newCtx.Done()
-		funcCancel()
+		select {
+		case <-ctx.Done():
+			cancelFunc()
+		case <-done:
+		}
 	}()
-	// wait for push to complete
-	return funcPush()
+	return func() { close(done) }
 }
 
 // PushAsync initiates an asynchronoush push and returns
@@ -153,34 +163,26 @@ func (q *AQueue) Pop() (interface{}, error) {
 	return popFunc()
 }
 
-// PopWithContext removes an element from the queue with context
+// PopWithContext removes an element from the queue, giving up when ctx is done.
 func (q *AQueue) PopWithContext(ctx context.Context) (interface{}, error) {
 	if ctx == nil {
 		return nil, errInvalidArgument
 	}
 	popFunc, cancelFunc := q.PopAsync()
-	go func() {
-		<-ctx.Done()
-		cancelFunc()
-	}()
+	stop := watchContext(ctx, cancelFunc)
+	defer stop()
 	return popFunc()
 }
 
-// PopWithTimeout removes an element from the queue with context and timeout
+// PopWithTimeout is a convenience method implementing Pop() with a timeout
+// on top of ctx.
 func (q *AQueue) PopWithTimeout(ctx context.Context, d time.Duration) (interface{}, error) {
 	if ctx == nil {
 		return nil, errInvalidArgument
 	}
-	// create new context with timeout
 	newCtx, cancel := context.WithTimeout(ctx, d)
 	defer cancel()
-	// perform async Pop()
-	popFunc, cancelFunc := q.PopAsync()
-	go func() {
-		<-newCtx.Done()
-		cancelFunc()
-	}()
-	return popFunc()
+	return q.PopWithContext(newCtx)
 }
 
 // PopAsync initiates retrieval of the next a value from the queue and
@@ -224,12 +226,14 @@ func (q *AQueue) TryPop() (interface{}, error) {
 }
 
 func (q *AQueue) tryPopUnsync() (interface{}, error) {
-	// check if que is closed
-	if q.closed {
-		return nil, errClosed
-	}
-	// update value or wait
+	// A value that was successfully pushed before Close() must still be
+	// delivered: Push already reported success to the producer, so dropping
+	// it here would lose an acknowledged message. Only report closed once
+	// the slot is empty.
 	if !q.hasValue {
+		if q.closed {
+			return nil, errClosed
+		}
 		return nil, errBusy
 	}
 	val := q.val
@@ -238,16 +242,16 @@ func (q *AQueue) tryPopUnsync() (interface{}, error) {
 	return val, nil
 }
 
-// Close closes the queue causing any pending Pop/Push calls to exit with EOF error
-// and any subsequent requests to fail as well. Closed queue cannot be reused.
+// Close closes the queue. Pending and subsequent Push calls fail with a
+// StatusCodeClosed error. A value that was already pushed remains available
+// to exactly one Pop; after that (or immediately, if the queue was empty)
+// Pop fails with StatusCodeClosed. A closed queue cannot be reused.
 func (q *AQueue) Close() {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 	if q.closed {
 		return
 	}
-	q.val = nil // release any references
-	q.hasValue = false
 	q.closed = true
 	q.cond.Broadcast()
 }

@@ -17,6 +17,7 @@ package aqueue
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -293,6 +294,69 @@ func TestTryPop(t *testing.T) {
 	assert.IsType(t, refErr, err)
 	assert.Equal(t, refErr.Error(), err.Error())
 	assert.Equal(t, refErr.StatusCode(), err.(*Error).StatusCode())
+}
+
+func TestPushWithTimeoutDeliversValue(t *testing.T) {
+	q := NewAQueue()
+	err := q.PushWithTimeout(context.Background(), "payload", time.Second)
+	assert.NoError(t, err)
+	val, err := q.TryPop()
+	assert.NoError(t, err)
+	assert.Equal(t, "payload", val, "PushWithTimeout must push val, not nil")
+}
+
+func TestWithContextDoesNotLeakGoroutines(t *testing.T) {
+	q := NewAQueue()
+	ctx := context.Background() // never done: any watcher goroutine would live forever
+	before := runtime.NumGoroutine()
+	for i := 0; i < 1000; i++ {
+		assert.NoError(t, q.PushWithContext(ctx, i))
+		v, err := q.PopWithContext(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, i, v)
+	}
+	// give any stragglers a moment to exit
+	time.Sleep(50 * time.Millisecond)
+	after := runtime.NumGoroutine()
+	assert.LessOrEqual(t, after, before+5, "PushWithContext/PopWithContext leaked goroutines")
+}
+
+func TestWithContextCancels(t *testing.T) {
+	q := NewAQueue()
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	_, err := q.PopWithContext(ctx) // empty queue: must give up when ctx expires
+	assert.Error(t, err)
+	assert.Equal(t, StatusCodeCancelled, err.(*Error).StatusCode())
+
+	assert.NoError(t, q.TryPush(1))
+	ctx2, cancel2 := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel2()
+	err = q.PushWithContext(ctx2, 2) // full queue: must give up when ctx expires
+	assert.Error(t, err)
+	assert.Equal(t, StatusCodeCancelled, err.(*Error).StatusCode())
+}
+
+func TestCloseDrainsPendingValue(t *testing.T) {
+	q := NewAQueue()
+	assert.NoError(t, q.Push("last"))
+	q.Close()
+
+	// pushes fail immediately
+	err := q.Push("more")
+	assert.Equal(t, StatusCodeClosed, err.(*Error).StatusCode())
+
+	// the acknowledged value is still delivered exactly once
+	val, err := q.Pop()
+	assert.NoError(t, err)
+	assert.Equal(t, "last", val)
+
+	// then the queue reports closed
+	val, err = q.Pop()
+	assert.Nil(t, val)
+	assert.Equal(t, StatusCodeClosed, err.(*Error).StatusCode())
+	_, err = q.TryPop()
+	assert.Equal(t, StatusCodeClosed, err.(*Error).StatusCode())
 }
 
 func BenchmarkPushThroughQueueWithConcurrentPushers(b *testing.B) {
